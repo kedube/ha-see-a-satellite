@@ -5,12 +5,12 @@ consume it. With a single upstream data source this stays a HACS integration, no
 a core integration.
 
 ## Library (`~/src/see-a-satellite`)
-- [ ] Create the GitHub repo `wildekek/see-a-satellite` and push.
+- [x] Create the GitHub repo `wildekek/see-a-satellite` and push.
 - [ ] Publish `see-a-satellite` 0.1.0 to PyPI (the integration requires it).
 
 ## HACS integration (this repo)
-- [ ] Create the GitHub repo `wildekek/ha-see-a-satellite` and push.
-- [ ] Brand images in `custom_components/see_a_satellite/brand/` (icon.png, logo.png;
+- [x] Create the GitHub repo `wildekek/ha-see-a-satellite` and push.
+- [x] Brand images in `custom_components/see_a_satellite/brand/` (icon.png, icon@2x.png;
       HA 2026.10 serves these for custom integrations, no brands PR needed).
 - [ ] First release `v0.1.0` (tag must match `version` in manifest.json).
 - [ ] Optionally submit to the HACS default repository list.
