@@ -79,17 +79,13 @@ def mock_setup_entry() -> Generator[AsyncMock]:
 
 @pytest.fixture
 def mock_config_entry() -> MockConfigEntry:
-    """A location in Veenendaal using the website's catalog."""
+    """A location in Veenendaal."""
     return MockConfigEntry(
         domain=DOMAIN,
         title="Veenendaal",
-        unique_id="52.0277_5.5583_brightest",
-        data={
-            "latitude": 52.0277,
-            "longitude": 5.5583,
-            "elevation": 194,
-            "catalog": "brightest",
-        },
+        unique_id="52.0277_5.5583",
+        minor_version=2,
+        data={"latitude": 52.0277, "longitude": 5.5583, "elevation": 194},
     )
 
 

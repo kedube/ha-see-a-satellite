@@ -31,9 +31,8 @@ from homeassistant.util import dt as dt_util
 from homeassistant.util.hass_dict import HassKey
 
 from .const import (
+    CATALOG,
     CATALOG_REFRESH,
-    CATALOG_STARLINK,
-    CONF_CATALOG,
     CONF_CLOUD_COVER,
     CONF_MAX_MAGNITUDE,
     DEFAULT_MAX_MAGNITUDE,
@@ -44,12 +43,12 @@ from .const import (
 
 type SeeASatelliteConfigEntry = ConfigEntry[SeeASatelliteCoordinator]
 
-DATA_CATALOGS: HassKey[dict[str, SatelliteCatalog]] = HassKey(DOMAIN)
+DATA_CATALOG: HassKey[SatelliteCatalog] = HassKey(DOMAIN)
 STORAGE_VERSION = 1
 
 
 class SatelliteCatalog:
-    """A catalog shared by all locations using it, persisted across restarts.
+    """The catalog shared by all locations, persisted across restarts.
 
     The website's author hosts the catalog, so it is downloaded once for all
     locations and kept in storage instead of on every restart.
@@ -106,12 +105,11 @@ class SatelliteCatalog:
 
 
 @callback
-def async_get_catalog(hass: HomeAssistant, name: str) -> SatelliteCatalog:
-    """Return the shared catalog with this name."""
-    catalogs = hass.data.setdefault(DATA_CATALOGS, {})
-    if name not in catalogs:
-        catalogs[name] = SatelliteCatalog(hass, name)
-    return catalogs[name]
+def async_get_catalog(hass: HomeAssistant) -> SatelliteCatalog:
+    """Return the shared catalog."""
+    if DATA_CATALOG not in hass.data:
+        hass.data[DATA_CATALOG] = SatelliteCatalog(hass, CATALOG)
+    return hass.data[DATA_CATALOG]
 
 
 @dataclass(slots=True)
@@ -173,7 +171,7 @@ class SeeASatelliteCoordinator(DataUpdateCoordinator[SatelliteData]):
         self.latitude: float = entry.data[CONF_LATITUDE]
         self.longitude: float = entry.data[CONF_LONGITUDE]
         self.elevation: float = entry.data[CONF_ELEVATION]
-        self.catalog = async_get_catalog(hass, entry.data[CONF_CATALOG])
+        self.catalog = async_get_catalog(hass)
         self.max_magnitude: float = entry.options.get(
             CONF_MAX_MAGNITUDE, DEFAULT_MAX_MAGNITUDE
         )
@@ -187,15 +185,12 @@ class SeeASatelliteCoordinator(DataUpdateCoordinator[SatelliteData]):
         except CatalogError as err:
             raise UpdateFailed(f"Unable to fetch the satellite catalog: {err}") from err
         cloud_cover = await self._async_cloud_cover()
-        trains = self.catalog.name == CATALOG_STARLINK
-        groups = await self.hass.async_add_executor_job(
-            self._predict, satellites, trains
-        )
+        groups = await self.hass.async_add_executor_job(self._predict, satellites)
         data = SatelliteData(
             passes=[
                 SatellitePass(
                     group=g,
-                    bright=g.bright and not trains,
+                    bright=g.bright,
                     cloud_cover=cloud_cover_at(cloud_cover, g.start),
                 )
                 for g in groups
@@ -206,7 +201,7 @@ class SeeASatelliteCoordinator(DataUpdateCoordinator[SatelliteData]):
         self._schedule_boundary(data)
         return data
 
-    def _predict(self, satellites: list[Satellite], trains: bool) -> list[TransitGroup]:
+    def _predict(self, satellites: list[Satellite]) -> list[TransitGroup]:
         transits = predict_transits(
             satellites,
             self.latitude,
@@ -214,7 +209,7 @@ class SeeASatelliteCoordinator(DataUpdateCoordinator[SatelliteData]):
             self.elevation,
             max_magnitude=self.max_magnitude,
         )
-        return group_transits(transits, trains=trains, catalog_size=len(satellites))
+        return group_transits(transits, catalog_size=len(satellites))
 
     async def _async_cloud_cover(self) -> CloudCover | None:
         if not self.use_cloud_cover:

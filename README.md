@@ -22,7 +22,7 @@ config directory as `config/custom_components/see_a_satellite`, then restart.
 
 Then go to **Settings → Devices & services → Add integration → See A Satellite
 Tonight**. The defaults are your home location and elevation. Add the
-integration again for more locations, or pick the *Starlink trains* catalog.
+integration again for more locations.
 
 ## Entities (per location)
 

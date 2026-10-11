@@ -14,22 +14,14 @@ from homeassistant.data_entry_flow import FlowResultType
 USER_INPUT = {
     "location": {"latitude": 52.0277, "longitude": 5.5583},
     "elevation": 10,
-    "catalog": "brightest",
 }
 
 
 @pytest.mark.usefixtures("mock_setup_entry")
-@pytest.mark.parametrize(
-    ("catalog", "title"),
-    [("brightest", "52.0277, 5.5583"), ("starlink", "52.0277, 5.5583 Starlink")],
-)
 async def test_user_flow(
-    hass: HomeAssistant,
-    mock_see_a_satellite: dict[str, AsyncMock],
-    catalog: str,
-    title: str,
+    hass: HomeAssistant, mock_see_a_satellite: dict[str, AsyncMock]
 ) -> None:
-    """A location is set up once its catalog is reachable."""
+    """A location is set up once the catalog is reachable."""
     result = await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
@@ -37,17 +29,16 @@ async def test_user_flow(
     assert result["errors"] == {}
 
     result = await hass.config_entries.flow.async_configure(
-        result["flow_id"], {**USER_INPUT, "catalog": catalog}
+        result["flow_id"], USER_INPUT
     )
     assert result["type"] is FlowResultType.CREATE_ENTRY
-    assert result["title"] == title
+    assert result["title"] == "52.0277, 5.5583"
     assert result["data"] == {
         "latitude": 52.0277,
         "longitude": 5.5583,
         "elevation": 10,
-        "catalog": catalog,
     }
-    assert result["result"].unique_id == f"52.0277_5.5583_{catalog}"
+    assert result["result"].unique_id == "52.0277_5.5583"
     mock_see_a_satellite["fetch_site_catalog"].assert_awaited_once()
 
 
@@ -81,11 +72,7 @@ async def test_user_flow_errors(
 
 
 @pytest.mark.usefixtures("mock_setup_entry", "mock_see_a_satellite")
-@pytest.mark.parametrize(
-    ("catalog", "title"),
-    [("brightest", "test home"), ("starlink", "test home Starlink")],
-)
-async def test_title_of_home(hass: HomeAssistant, catalog: str, title: str) -> None:
+async def test_title_of_home(hass: HomeAssistant) -> None:
     """The home location is named after the home."""
     result = await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
@@ -98,16 +85,15 @@ async def test_title_of_home(hass: HomeAssistant, catalog: str, title: str) -> N
                 "longitude": hass.config.longitude,
             },
             "elevation": 0,
-            "catalog": catalog,
         },
     )
-    assert result["title"] == title
+    assert result["title"] == "test home"
 
 
 async def test_duplicate_location(
     hass: HomeAssistant, mock_config_entry: MockConfigEntry
 ) -> None:
-    """The same location and catalog can only be added once."""
+    """The same location can only be added once."""
     mock_config_entry.add_to_hass(hass)
     result = await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}

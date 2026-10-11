@@ -10,12 +10,10 @@
     "step": {
       "user": {
         "data": {
-          "catalog": "Satellites",
           "elevation": "[%key:common::config_flow::data::elevation%]",
           "location": "[%key:common::config_flow::data::location%]"
         },
         "data_description": {
-          "catalog": "Which satellites to predict.",
           "elevation": "Height of the location above sea level.",
           "location": "Where you will be watching from."
         },
@@ -61,14 +59,6 @@
           "cloud_cover": "Add the Open-Meteo cloud cover forecast to each pass.",
           "max_magnitude": "Only report passes at least this bright. Lower numbers are brighter; 3 is what the website uses, about the faintest you can see from a suburb."
         }
-      }
-    }
-  },
-  "selector": {
-    "catalog": {
-      "options": {
-        "brightest": "Brightest satellites (from the See A Satellite Tonight website)",
-        "starlink": "Starlink trains (from the See A Satellite Tonight website)"
       }
     }
   }

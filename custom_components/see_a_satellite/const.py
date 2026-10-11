@@ -9,14 +9,11 @@ LOGGER = logging.getLogger(__package__)
 
 WEBSITE_URL: Final = "https://james.darpinian.com/satellites/"
 
-CONF_CATALOG: Final = "catalog"
 CONF_MAX_MAGNITUDE: Final = "max_magnitude"
 CONF_CLOUD_COVER: Final = "cloud_cover"
 
-# The website's catalogs.
-CATALOG_BRIGHTEST: Final = "brightest"
-CATALOG_STARLINK: Final = "starlink"
-CATALOGS: Final = [CATALOG_BRIGHTEST, CATALOG_STARLINK]
+# The website's catalog of the brightest satellites.
+CATALOG: Final = "brightest"
 
 DEFAULT_MAX_MAGNITUDE: Final = 3.0
 

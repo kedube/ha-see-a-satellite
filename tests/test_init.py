@@ -101,18 +101,14 @@ async def test_catalog_shared_and_stored(
     freezer: FrozenDateTimeFactory,
     mock_see_a_satellite: dict[str, AsyncMock],
 ) -> None:
-    """Locations using the same catalog share one download, which is stored."""
+    """All locations share one catalog download, which is stored."""
     freezer.move_to(NOW)
     entries = [
         MockConfigEntry(
             domain=DOMAIN,
             title=title,
-            data={
-                "latitude": lat,
-                "longitude": 5.5,
-                "elevation": 0,
-                "catalog": "brightest",
-            },
+            minor_version=2,
+            data={"latitude": lat, "longitude": 5.5, "elevation": 0},
         )
         for title, lat in (("Home", 52.0), ("Cabin", 60.0))
     ]
@@ -145,3 +141,47 @@ async def test_cloud_cover_failure_is_tolerated(
     state = hass.states.get("sensor.veenendaal_next_pass")
     assert state.state != "unavailable"
     assert state.attributes["cloud_cover"] is None
+
+
+async def test_migrate_brightest_entry(
+    hass: HomeAssistant, mock_see_a_satellite: dict[str, AsyncMock]
+) -> None:
+    """Entries from before 1.2 lose the catalog choice."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        title="Veenendaal",
+        unique_id="52.0277_5.5583_brightest",
+        data={
+            "latitude": 52.0277,
+            "longitude": 5.5583,
+            "elevation": 194,
+            "catalog": "brightest",
+        },
+    )
+    entry.add_to_hass(hass)
+    await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+    assert entry.state is ConfigEntryState.LOADED
+    assert entry.minor_version == 2
+    assert entry.unique_id == "52.0277_5.5583"
+    assert entry.data == {"latitude": 52.0277, "longitude": 5.5583, "elevation": 194}
+
+
+@pytest.mark.usefixtures("mock_see_a_satellite")
+async def test_starlink_entry_not_migrated(hass: HomeAssistant) -> None:
+    """Starlink train entries can't be migrated and must be removed."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        title="Veenendaal Starlink",
+        unique_id="52.0277_5.5583_starlink",
+        data={
+            "latitude": 52.0277,
+            "longitude": 5.5583,
+            "elevation": 194,
+            "catalog": "starlink",
+        },
+    )
+    entry.add_to_hass(hass)
+    await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+    assert entry.state is ConfigEntryState.MIGRATION_ERROR

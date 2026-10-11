@@ -8,7 +8,7 @@ from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util import dt as dt_util
 
-from .const import ATTRIBUTION, CATALOG_STARLINK, DOMAIN, WEBSITE_URL
+from .const import ATTRIBUTION, DOMAIN, WEBSITE_URL
 from .coordinator import SatellitePass, SeeASatelliteCoordinator
 
 _COMPASS = (
@@ -138,9 +138,6 @@ class SeeASatelliteEntity(CoordinatorEntity[SeeASatelliteCoordinator]):
         """Initialize the entity."""
         super().__init__(coordinator)
         entry = coordinator.config_entry
-        special = (
-            "?special=starlink" if coordinator.catalog.name == CATALOG_STARLINK else ""
-        )
         self._attr_translation_key = key
         self._attr_unique_id = f"{entry.entry_id}_{key}"
         self._attr_device_info = DeviceInfo(
@@ -150,6 +147,6 @@ class SeeASatelliteEntity(CoordinatorEntity[SeeASatelliteCoordinator]):
             model="See A Satellite Tonight",
             entry_type=DeviceEntryType.SERVICE,
             configuration_url=(
-                f"{WEBSITE_URL}{special}#loc={coordinator.latitude:.4f},{coordinator.longitude:.4f}"
+                f"{WEBSITE_URL}#loc={coordinator.latitude:.4f},{coordinator.longitude:.4f}"
             ),
         )

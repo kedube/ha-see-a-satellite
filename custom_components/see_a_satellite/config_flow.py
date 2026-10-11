@@ -28,16 +28,10 @@ from homeassistant.helpers.selector import (
     NumberSelector,
     NumberSelectorConfig,
     NumberSelectorMode,
-    SelectSelector,
-    SelectSelectorConfig,
-    SelectSelectorMode,
 )
 
 from .const import (
-    CATALOG_BRIGHTEST,
-    CATALOG_STARLINK,
-    CATALOGS,
-    CONF_CATALOG,
+    CATALOG,
     CONF_CLOUD_COVER,
     CONF_MAX_MAGNITUDE,
     DEFAULT_MAX_MAGNITUDE,
@@ -61,13 +55,6 @@ USER_SCHEMA = vol.Schema(
                 unit_of_measurement=UnitOfLength.METERS,
             )
         ),
-        vol.Required(CONF_CATALOG): SelectSelector(
-            SelectSelectorConfig(
-                options=CATALOGS,
-                mode=SelectSelectorMode.LIST,
-                translation_key=CONF_CATALOG,
-            )
-        ),
     }
 )
 OPTIONS_SCHEMA = vol.Schema(
@@ -86,21 +73,21 @@ class SeeASatelliteConfigFlow(ConfigFlow, domain=DOMAIN):
     """Set up predictions for a location."""
 
     VERSION = 1
+    MINOR_VERSION = 2
 
     @override
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
-        """Choose the location and catalog."""
+        """Choose the location."""
         errors: dict[str, str] = {}
         if user_input is not None:
             latitude = user_input[CONF_LOCATION][CONF_LATITUDE]
             longitude = user_input[CONF_LOCATION][CONF_LONGITUDE]
-            catalog = user_input[CONF_CATALOG]
-            await self.async_set_unique_id(f"{latitude:.4f}_{longitude:.4f}_{catalog}")
+            await self.async_set_unique_id(f"{latitude:.4f}_{longitude:.4f}")
             self._abort_if_unique_id_configured()
             try:
-                await fetch_site_catalog(async_get_clientsession(self.hass), catalog)
+                await fetch_site_catalog(async_get_clientsession(self.hass), CATALOG)
             except CatalogError:
                 errors["base"] = "cannot_connect"
             except Exception:
@@ -108,12 +95,11 @@ class SeeASatelliteConfigFlow(ConfigFlow, domain=DOMAIN):
                 errors["base"] = "unknown"
             else:
                 return self.async_create_entry(
-                    title=self._title(latitude, longitude, catalog),
+                    title=self._title(latitude, longitude),
                     data={
                         CONF_LATITUDE: latitude,
                         CONF_LONGITUDE: longitude,
                         CONF_ELEVATION: user_input[CONF_ELEVATION],
-                        CONF_CATALOG: catalog,
                     },
                 )
 
@@ -128,24 +114,19 @@ class SeeASatelliteConfigFlow(ConfigFlow, domain=DOMAIN):
                         CONF_LONGITUDE: self.hass.config.longitude,
                     },
                     CONF_ELEVATION: self.hass.config.elevation,
-                    CONF_CATALOG: CATALOG_BRIGHTEST,
                 },
             ),
             errors=errors,
         )
 
-    def _title(self, latitude: float, longitude: float, catalog: str) -> str:
+    def _title(self, latitude: float, longitude: float) -> str:
         """Name the location after the home, or by its coordinates."""
         if (
             abs(latitude - self.hass.config.latitude) < 1e-4
             and abs(longitude - self.hass.config.longitude) < 1e-4
         ):
-            title = self.hass.config.location_name
-        else:
-            title = f"{latitude:.4f}, {longitude:.4f}"
-        if catalog == CATALOG_STARLINK:
-            title += " Starlink"
-        return title
+            return self.hass.config.location_name
+        return f"{latitude:.4f}, {longitude:.4f}"
 
     @staticmethod
     @callback
