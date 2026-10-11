@@ -51,6 +51,82 @@ conditions:
     value_template: "{{ 'bright' in trigger.calendar_event.summary }}"
 ```
 
+### Full example: announce bright passes on a speaker
+
+This automation runs 10 minutes before a bright pass, but only when a light in
+the gazebo is on. It reads the calendar event and announces the pass in plain
+language: what the object is, where to look, how high and how bright it is,
+how long it stays visible, and what the clouds will be like. It uses Music
+Assistant with Piper TTS; you can use `tts.speak` with any media player
+instead. Replace the calendar, area, speaker and TTS entities with your own.
+
+```yaml
+alias: See A Satellite Tonight
+description: >-
+  10 minutes before a bright satellite pass, announce it on the gazebo
+  speakers in plain language, only when a gazebo light is on.
+mode: single
+triggers:
+  - trigger: calendar
+    event: start
+    offset: "-0:10:0"
+    entity_id: calendar.home_satellite_passes
+conditions:
+  # Stands in for "someone is in the gazebo".
+  - condition: light.is_on
+    target:
+      area_id: gazebo
+    options:
+      behavior: any
+      for: "00:00:00"
+  - alias: Bright satellite
+    condition: template
+    value_template: "{{ 'bright' in trigger.calendar_event.summary }}"
+actions:
+  # Builds the message from the event: the kind of object instead of its
+  # catalog name, 12-hour times, sky height in words instead of degrees, and
+  # advice on brightness and cloud cover. Falls back to a short message if the
+  # description format changes.
+  - variables:
+      message: |-
+        {%- set ev = trigger.calendar_event -%}
+        {%- set d = ev.description -%}
+        {%- set dirs = {'N':'north','NNE':'north-north-east','NE':'north-east','ENE':'east-north-east','E':'east','ESE':'east-south-east','SE':'south-east','SSE':'south-south-east','S':'south','SSW':'south-south-west','SW':'south-west','WSW':'west-south-west','W':'west','WNW':'west-north-west','NW':'north-west','NNW':'north-north-west'} -%}
+        {%- set pts = d | regex_findall('at (\\d{1,2}):(\\d{2}):\\d{2} in the ([NESW]{1,3}), (\\d+)° up') -%}
+        {%- set mins = ((as_datetime(ev.start) - now()).total_seconds() / 60) | round(0) | int -%}
+        {%- set raw = ev.summary | regex_replace('^\\W+', '') | regex_replace('\\s*\\(bright\\)', '') | trim -%}
+        {%- set multi = '+' in raw -%}
+        {%- set base = raw | regex_replace('\\s*\\+\\d+', '') | trim -%}
+        {%- if base == 'ISS' -%}{%- set what = 'the International Space Station, with astronauts on board,' -%}
+        {%- elif 'R/B' in base and base.startswith('CZ') -%}{%- set what = 'a spent Chinese rocket stage' -%}
+        {%- elif 'R/B' in base -%}{%- set what = 'a spent rocket stage' -%}
+        {%- elif base.upper().startswith('STARLINK') -%}{%- set what = 'a Starlink satellite' -%}
+        {%- else -%}{%- set what = 'a satellite' -%}{%- endif -%}
+        {%- if pts | length < 3 -%}
+        Heads up! In about {{ mins }} minutes, {{ what }} will fly over. Look up!
+        {%- else -%}
+        {%- set ns = namespace(h=[], t=[], dir=[]) -%}
+        {%- for p in pts -%}
+        {%- set deg = p[3] | int -%}
+        {%- set ns.h = ns.h + ['just above the horizon' if deg < 20 else 'low in the sky' if deg < 40 else 'halfway up the sky' if deg < 60 else 'high in the sky' if deg < 80 else 'almost straight overhead'] -%}
+        {%- set ns.t = ns.t + [((p[0] | int) % 12 or 12) ~ ':' ~ p[1]] -%}
+        {%- set ns.dir = ns.dir + [dirs.get(p[2], p[2])] -%}
+        {%- endfor -%}
+        {%- set mag = (d | regex_findall_index('magnitude (-?[\\d.]+)') | float(2)) -%}
+        {%- set cloud = (d | regex_findall_index('cloud cover: (\\d+)%') | int(-1)) -%}
+        {%- set dur = ((as_datetime(ev.end) - as_datetime(ev.start)).total_seconds() / 60) | round(0) | int -%}
+        Heads up! In about {{ mins }} minutes, {{ what }} will fly over{{ ', together with a companion' if multi }}. At {{ ns.t[0] }}, look to the {{ ns.dir[0] }}, {{ ns.h[0] }}. It's {{ 'very bright, brighter than almost any star' if mag < 0 else 'bright and easy to spot' if mag < 2 else 'fairly faint, so look carefully' }}, at its best {{ ns.h[1] }} to the {{ ns.dir[1] }}. It disappears in the {{ ns.dir[2] }} {{ 'in less than a minute' if dur < 1 else 'about a minute later' if dur == 1 else 'about ' ~ dur ~ ' minutes later' }}. {{ '' if cloud < 0 else 'Skies look clear, so you should see it well.' if cloud < 25 else 'There are some clouds around, so you may need a bit of luck.' if cloud < 70 else 'It looks cloudy, so you might miss it.' }}
+        {%- endif -%}
+  - action: music_assistant.play_announcement
+    target:
+      entity_id: media_player.gazebo_speakers
+    data:
+      message: "{{ message }}"
+      tts_entity_id: tts.piper
+      announce_volume: 40
+      use_pre_announce: true
+```
+
 ## How it works
 
 The `see-a-satellite` library is a Python port of the website's workers:
