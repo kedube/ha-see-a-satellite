@@ -9,5 +9,5 @@
   "issue_tracker": "https://github.com/wildekek/ha-see-a-satellite/issues",
   "loggers": ["see_a_satellite"],
   "requirements": ["see-a-satellite==0.1.0"],
-  "version": "0.1.0"
+  "version": "0.1.1"
 }
