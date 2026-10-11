@@ -1,0 +1,147 @@
+"""Tests for setting up See A Satellite Tonight."""
+
+from datetime import timedelta
+from typing import Any
+from unittest.mock import AsyncMock
+
+from freezegun.api import FrozenDateTimeFactory
+import pytest
+from pytest_homeassistant_custom_component.common import (
+    MockConfigEntry,
+    async_fire_time_changed,
+)
+from see_a_satellite import CatalogError, Satellite, dump_catalog
+
+from custom_components.see_a_satellite.const import DOMAIN
+from homeassistant.config_entries import ConfigEntryState
+from homeassistant.core import HomeAssistant
+
+from .conftest import NOW
+
+
+async def test_setup_and_unload(
+    hass: HomeAssistant, init_integration: MockConfigEntry
+) -> None:
+    """The entry loads and unloads."""
+    assert init_integration.state is ConfigEntryState.LOADED
+    assert await hass.config_entries.async_unload(init_integration.entry_id)
+    assert init_integration.state is ConfigEntryState.NOT_LOADED
+
+
+async def test_catalog_unavailable(
+    hass: HomeAssistant,
+    mock_config_entry: MockConfigEntry,
+    mock_see_a_satellite: dict[str, AsyncMock],
+) -> None:
+    """Setup is retried while there is no catalog at all."""
+    mock_see_a_satellite["fetch_site_catalog"].side_effect = CatalogError("boom")
+    mock_config_entry.add_to_hass(hass)
+    await hass.config_entries.async_setup(mock_config_entry.entry_id)
+    await hass.async_block_till_done()
+    assert mock_config_entry.state is ConfigEntryState.SETUP_RETRY
+
+
+async def test_catalog_restored_from_storage(
+    hass: HomeAssistant,
+    hass_storage: dict[str, Any],
+    freezer: FrozenDateTimeFactory,
+    mock_config_entry: MockConfigEntry,
+    mock_see_a_satellite: dict[str, AsyncMock],
+    satellites: list[Satellite],
+) -> None:
+    """A stored catalog is used when it can't be refreshed."""
+    freezer.move_to(NOW)
+    hass_storage[f"{DOMAIN}.brightest_catalog"] = {
+        "version": 1,
+        "key": f"{DOMAIN}.brightest_catalog",
+        "data": {
+            "updated": (NOW - timedelta(days=1)).isoformat(),
+            "catalog": dump_catalog(satellites),
+        },
+    }
+    mock_see_a_satellite["fetch_site_catalog"].side_effect = CatalogError("boom")
+    mock_config_entry.add_to_hass(hass)
+    await hass.config_entries.async_setup(mock_config_entry.entry_id)
+    await hass.async_block_till_done()
+    assert mock_config_entry.state is ConfigEntryState.LOADED
+    assert (
+        hass.states.get("sensor.veenendaal_next_pass").state
+        == "2026-10-10T19:08:40+00:00"
+    )
+
+
+async def test_fresh_stored_catalog_is_not_downloaded(
+    hass: HomeAssistant,
+    hass_storage: dict[str, Any],
+    freezer: FrozenDateTimeFactory,
+    mock_config_entry: MockConfigEntry,
+    mock_see_a_satellite: dict[str, AsyncMock],
+    satellites: list[Satellite],
+) -> None:
+    """A recently stored catalog avoids downloads after a restart."""
+    freezer.move_to(NOW)
+    hass_storage[f"{DOMAIN}.brightest_catalog"] = {
+        "version": 1,
+        "key": f"{DOMAIN}.brightest_catalog",
+        "data": {
+            "updated": (NOW - timedelta(hours=1)).isoformat(),
+            "catalog": dump_catalog(satellites),
+        },
+    }
+    mock_config_entry.add_to_hass(hass)
+    await hass.config_entries.async_setup(mock_config_entry.entry_id)
+    await hass.async_block_till_done()
+    assert mock_config_entry.state is ConfigEntryState.LOADED
+    mock_see_a_satellite["fetch_site_catalog"].assert_not_awaited()
+
+
+async def test_catalog_shared_and_stored(
+    hass: HomeAssistant,
+    hass_storage: dict[str, Any],
+    freezer: FrozenDateTimeFactory,
+    mock_see_a_satellite: dict[str, AsyncMock],
+) -> None:
+    """Locations using the same catalog share one download, which is stored."""
+    freezer.move_to(NOW)
+    entries = [
+        MockConfigEntry(
+            domain=DOMAIN,
+            title=title,
+            data={
+                "latitude": lat,
+                "longitude": 5.5,
+                "elevation": 0,
+                "catalog": "brightest",
+            },
+        )
+        for title, lat in (("Home", 52.0), ("Cabin", 60.0))
+    ]
+    for entry in entries:
+        entry.add_to_hass(hass)
+        await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+    assert all(entry.state is ConfigEntryState.LOADED for entry in entries)
+    mock_see_a_satellite["fetch_site_catalog"].assert_awaited_once()
+
+    freezer.tick(timedelta(seconds=11))
+    async_fire_time_changed(hass)
+    await hass.async_block_till_done()
+    stored = hass_storage[f"{DOMAIN}.brightest_catalog"]["data"]
+    assert len(stored["catalog"]) == 22
+
+
+@pytest.mark.usefixtures("init_integration")
+async def test_cloud_cover_failure_is_tolerated(
+    hass: HomeAssistant,
+    freezer: FrozenDateTimeFactory,
+    mock_see_a_satellite: dict[str, AsyncMock],
+) -> None:
+    """Passes are still predicted without a cloud cover forecast."""
+    mock_see_a_satellite["fetch_cloud_cover"].side_effect = CatalogError("boom")
+    freezer.tick(timedelta(hours=2, seconds=1))
+    async_fire_time_changed(hass)
+    await hass.async_block_till_done(wait_background_tasks=True)
+    assert mock_see_a_satellite["fetch_cloud_cover"].await_count == 2
+    state = hass.states.get("sensor.veenendaal_next_pass")
+    assert state.state != "unavailable"
+    assert state.attributes["cloud_cover"] is None

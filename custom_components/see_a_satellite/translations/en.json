@@ -1,0 +1,75 @@
+{
+    "config": {
+        "abort": {
+            "already_configured": "Location is already configured"
+        },
+        "error": {
+            "cannot_connect": "Failed to connect",
+            "unknown": "Unexpected error"
+        },
+        "step": {
+            "user": {
+                "data": {
+                    "catalog": "Satellites",
+                    "elevation": "Elevation",
+                    "location": "Location"
+                },
+                "data_description": {
+                    "catalog": "Which satellites to predict.",
+                    "elevation": "Height of the location above sea level.",
+                    "location": "Where you will be watching from."
+                },
+                "description": "Predict when satellites are visible to the naked eye from a location."
+            }
+        }
+    },
+    "entity": {
+        "binary_sensor": {
+            "pass_in_progress": {
+                "name": "Satellite visible"
+            }
+        },
+        "calendar": {
+            "passes": {
+                "name": "Satellite passes"
+            }
+        },
+        "sensor": {
+            "catalog_updated": {
+                "name": "Catalog updated"
+            },
+            "next_bright_pass": {
+                "name": "Next bright pass"
+            },
+            "next_pass": {
+                "name": "Next pass"
+            },
+            "passes_next_24h": {
+                "name": "Passes next 24 hours",
+                "unit_of_measurement": "passes"
+            }
+        }
+    },
+    "options": {
+        "step": {
+            "init": {
+                "data": {
+                    "cloud_cover": "Cloud cover forecast",
+                    "max_magnitude": "Faintest magnitude"
+                },
+                "data_description": {
+                    "cloud_cover": "Add the Open-Meteo cloud cover forecast to each pass.",
+                    "max_magnitude": "Only report passes at least this bright. Lower numbers are brighter; 3 is what the website uses, about the faintest you can see from a suburb."
+                }
+            }
+        }
+    },
+    "selector": {
+        "catalog": {
+            "options": {
+                "brightest": "Brightest satellites (from the See A Satellite Tonight website)",
+                "starlink": "Starlink trains (from the See A Satellite Tonight website)"
+            }
+        }
+    }
+}
