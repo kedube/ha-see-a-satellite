@@ -12,7 +12,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
 
 USER_INPUT = {
-    "location": {"latitude": 52.0277, "longitude": 5.5583},
+    "location": {"latitude": 52.0907, "longitude": 5.1214},
     "elevation": 10,
 }
 
@@ -32,13 +32,13 @@ async def test_user_flow(
         result["flow_id"], USER_INPUT
     )
     assert result["type"] is FlowResultType.CREATE_ENTRY
-    assert result["title"] == "52.0277, 5.5583"
+    assert result["title"] == "52.0907, 5.1214"
     assert result["data"] == {
-        "latitude": 52.0277,
-        "longitude": 5.5583,
+        "latitude": 52.0907,
+        "longitude": 5.1214,
         "elevation": 10,
     }
-    assert result["result"].unique_id == "52.0277_5.5583"
+    assert result["result"].unique_id == "52.0907_5.1214"
     mock_see_a_satellite["fetch_site_catalog"].assert_awaited_once()
 
 

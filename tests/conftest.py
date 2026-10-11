@@ -14,7 +14,7 @@ from see_a_satellite import Satellite, parse_site_catalog
 from custom_components.see_a_satellite.const import DOMAIN
 from homeassistant.core import HomeAssistant
 
-# The fixture catalog's satellites pass Veenendaal from 19:08:40 UTC.
+# The fixture catalog's satellites pass the test location from 19:08:36 UTC.
 NOW = datetime(2026, 10, 10, 19, 5, tzinfo=UTC)
 
 
@@ -79,13 +79,13 @@ def mock_setup_entry() -> Generator[AsyncMock]:
 
 @pytest.fixture
 def mock_config_entry() -> MockConfigEntry:
-    """A location in Veenendaal."""
+    """A test location: the Dom Tower in Utrecht."""
     return MockConfigEntry(
         domain=DOMAIN,
-        title="Veenendaal",
-        unique_id="52.0277_5.5583",
+        title="Home",
+        unique_id="52.0907_5.1214",
         minor_version=2,
-        data={"latitude": 52.0277, "longitude": 5.5583, "elevation": 194},
+        data={"latitude": 52.0907, "longitude": 5.1214, "elevation": 5},
     )
 
 

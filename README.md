@@ -132,9 +132,9 @@ actions:
 The `see-a-satellite` library is a Python port of the website's workers:
 SGP4 propagation at one-minute steps, the site's brightness, extinction,
 limiting-magnitude and Earth-shadow models, one-second refinement, and the
-site's grouping and "bright" label. For Veenendaal over 5 days it reproduces
-all 73 of the site's passes: start times within 9 s, end times within 19 s,
-magnitudes within 0.03.
+site's grouping and "bright" label. Compared with the site for one location
+over 5 days, it reproduces all 73 of its passes: start times within 9 s, end
+times within 19 s, magnitudes within 0.03.
 
 A full 5-day prediction for about 860 satellites takes about 3 s on a laptop,
 so expect tens of seconds on a Raspberry Pi. It runs in an executor every 2

@@ -64,10 +64,7 @@ async def test_catalog_restored_from_storage(
     await hass.config_entries.async_setup(mock_config_entry.entry_id)
     await hass.async_block_till_done()
     assert mock_config_entry.state is ConfigEntryState.LOADED
-    assert (
-        hass.states.get("sensor.veenendaal_next_pass").state
-        == "2026-10-10T19:08:40+00:00"
-    )
+    assert hass.states.get("sensor.home_next_pass").state == "2026-10-10T19:08:36+00:00"
 
 
 async def test_fresh_stored_catalog_is_not_downloaded(
@@ -138,7 +135,7 @@ async def test_cloud_cover_failure_is_tolerated(
     async_fire_time_changed(hass)
     await hass.async_block_till_done(wait_background_tasks=True)
     assert mock_see_a_satellite["fetch_cloud_cover"].await_count == 2
-    state = hass.states.get("sensor.veenendaal_next_pass")
+    state = hass.states.get("sensor.home_next_pass")
     assert state.state != "unavailable"
     assert state.attributes["cloud_cover"] is None
 
@@ -149,12 +146,12 @@ async def test_migrate_brightest_entry(
     """Entries from before 1.2 lose the catalog choice."""
     entry = MockConfigEntry(
         domain=DOMAIN,
-        title="Veenendaal",
-        unique_id="52.0277_5.5583_brightest",
+        title="Home",
+        unique_id="52.0907_5.1214_brightest",
         data={
-            "latitude": 52.0277,
-            "longitude": 5.5583,
-            "elevation": 194,
+            "latitude": 52.0907,
+            "longitude": 5.1214,
+            "elevation": 5,
             "catalog": "brightest",
         },
     )
@@ -163,8 +160,8 @@ async def test_migrate_brightest_entry(
     await hass.async_block_till_done()
     assert entry.state is ConfigEntryState.LOADED
     assert entry.minor_version == 2
-    assert entry.unique_id == "52.0277_5.5583"
-    assert entry.data == {"latitude": 52.0277, "longitude": 5.5583, "elevation": 194}
+    assert entry.unique_id == "52.0907_5.1214"
+    assert entry.data == {"latitude": 52.0907, "longitude": 5.1214, "elevation": 5}
 
 
 @pytest.mark.usefixtures("mock_see_a_satellite")
@@ -172,12 +169,12 @@ async def test_starlink_entry_not_migrated(hass: HomeAssistant) -> None:
     """Starlink train entries can't be migrated and must be removed."""
     entry = MockConfigEntry(
         domain=DOMAIN,
-        title="Veenendaal Starlink",
-        unique_id="52.0277_5.5583_starlink",
+        title="Home Starlink",
+        unique_id="52.0907_5.1214_starlink",
         data={
-            "latitude": 52.0277,
-            "longitude": 5.5583,
-            "elevation": 194,
+            "latitude": 52.0907,
+            "longitude": 5.1214,
+            "elevation": 5,
             "catalog": "starlink",
         },
     )
