@@ -6,13 +6,13 @@ a core integration.
 
 ## Library (`~/src/see-a-satellite`)
 - [x] Create the GitHub repo `wildekek/see-a-satellite` and push.
-- [ ] Publish `see-a-satellite` 0.1.0 to PyPI (the integration requires it).
+- [x] Publish `see-a-satellite` 0.1.0 to PyPI (trusted publishing: a GitHub release runs `release.yml`).
 
 ## HACS integration (this repo)
 - [x] Create the GitHub repo `wildekek/ha-see-a-satellite` and push.
 - [x] Brand images in `custom_components/see_a_satellite/brand/` (icon.png, icon@2x.png;
       HA 2026.10 serves these for custom integrations, no brands PR needed).
-- [ ] First release `v0.1.0` (tag must match `version` in manifest.json).
+- [x] First release `v0.1.0` (tag must match `version` in manifest.json).
 - [ ] Optionally submit to the HACS default repository list.
 - [ ] Tell James: the integration downloads his catalog twice a day per HA install
       (stored across restarts), with a `see-a-satellite` User-Agent.
