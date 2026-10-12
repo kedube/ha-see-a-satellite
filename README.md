@@ -7,9 +7,12 @@ his permission. It uses the same satellite catalog and the same brightness and
 visibility model, so it predicts the same passes as the website.
 
 The satellite catalog (orbits, brightness values and models) is collected and
-curated by the website. This integration downloads it a few times a day, keeps
-a copy across restarts, and predicts the passes locally with the
-[`see-a-satellite`](https://github.com/wildekek/see-a-satellite) library.
+curated by the website. This integration downloads it twice a day, shares it
+between locations and keeps a copy across restarts. Every 2 hours it predicts
+the next 5 days of passes for each location in the background, with the
+[`see-a-satellite`](https://github.com/wildekek/see-a-satellite) library. The
+library's README explains the prediction model and how closely it matches the
+website.
 
 ## Install
 
@@ -126,19 +129,6 @@ actions:
       announce_volume: 40
       use_pre_announce: true
 ```
-
-## How it works
-
-The `see-a-satellite` library is a Python port of the website's workers:
-SGP4 propagation at one-minute steps, the site's brightness, extinction,
-limiting-magnitude and Earth-shadow models, one-second refinement, and the
-site's grouping and "bright" label. Compared with the site for one location
-over 5 days, it reproduces all 73 of its passes: start times within 9 s, end
-times within 19 s, magnitudes within 0.03.
-
-A full 5-day prediction for about 860 satellites takes about 3 s on a laptop,
-so expect tens of seconds on a Raspberry Pi. It runs in an executor every 2
-hours; the catalog is refreshed every 12 hours and shared by all locations.
 
 ## Development
 
