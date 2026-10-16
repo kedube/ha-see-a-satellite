@@ -71,6 +71,23 @@ async def test_user_flow_errors(
     assert result["type"] is FlowResultType.CREATE_ENTRY
 
 
+@pytest.mark.usefixtures("mock_setup_entry")
+async def test_catalog_shared_between_flows(
+    hass: HomeAssistant, mock_see_a_satellite: dict[str, AsyncMock]
+) -> None:
+    """Adding another location reuses the catalog instead of downloading it."""
+    for latitude in (52.0, 60.0):
+        result = await hass.config_entries.flow.async_init(
+            DOMAIN, context={"source": SOURCE_USER}
+        )
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"],
+            {"location": {"latitude": latitude, "longitude": 5.5}, "elevation": 0},
+        )
+        assert result["type"] is FlowResultType.CREATE_ENTRY
+    mock_see_a_satellite["fetch_site_catalog"].assert_awaited_once()
+
+
 @pytest.mark.usefixtures("mock_setup_entry", "mock_see_a_satellite")
 async def test_title_of_home(hass: HomeAssistant) -> None:
     """The home location is named after the home."""

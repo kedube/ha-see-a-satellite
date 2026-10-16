@@ -2,7 +2,7 @@
 
 from collections.abc import Callable
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Any, override
 
 from homeassistant.components.sensor import (
@@ -15,8 +15,9 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from homeassistant.util import dt as dt_util
 
+from .const import UPCOMING_WINDOW
 from .coordinator import SatelliteData, SatellitePass, SeeASatelliteConfigEntry
-from .entity import SeeASatelliteEntity, pass_attributes, pass_title
+from .entity import SeeASatelliteEntity, compass, pass_attributes, pass_title
 
 PARALLEL_UPDATES = 0
 
@@ -40,7 +41,7 @@ def _next_bright_attrs(data: SatelliteData, now: datetime) -> dict[str, Any]:
 
 
 def _upcoming(data: SatelliteData, now: datetime) -> list[SatellitePass]:
-    horizon = now + timedelta(hours=24)
+    horizon = now + UPCOMING_WINDOW
     return [p for p in data.passes if p.end > now and p.start < horizon]
 
 
@@ -51,7 +52,7 @@ def _upcoming_attrs(data: SatelliteData, now: datetime) -> dict[str, Any]:
                 "start": p.start.isoformat(),
                 "satellite": pass_title(p),
                 "magnitude": round(p.group.min_magnitude, 1) + 0.0,
-                "direction": pass_attributes(p)["rise_direction"],
+                "direction": compass(p.group.primary.rise.azimuth),
                 "cloud_cover": p.cloud_cover,
             }
             for p in _upcoming(data, now)[:20]

@@ -10,7 +10,7 @@ The satellite catalog (orbits, brightness values and models) is collected and
 curated by the website. This integration downloads it twice a day, shares it
 between locations and keeps a copy across restarts. Every 2 hours it predicts
 the next 5 days of passes for each location in the background, with the
-[`see-a-satellite`](https://github.com/wildekek/see-a-satellite) library. The
+[`see-a-satellite`](https://github.com/kedube/see-a-satellite) library. The
 library's README explains the prediction model and how closely it matches the
 website.
 
@@ -133,7 +133,7 @@ actions:
 ## Development
 
 ```sh
-python3 -m venv .venv && .venv/bin/pip install pytest-homeassistant-custom-component ruff see-a-satellite
+python3 -m venv .venv && .venv/bin/pip install pytest-homeassistant-custom-component ruff $(jq -r '.requirements[]' custom_components/see_a_satellite/manifest.json)
 .venv/bin/pytest
 .venv/bin/ruff check custom_components tests
 ```

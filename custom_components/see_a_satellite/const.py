@@ -19,6 +19,8 @@ DEFAULT_MAX_MAGNITUDE: Final = 3.0
 
 CATALOG_REFRESH: Final = timedelta(hours=12)
 PREDICTION_REFRESH: Final = timedelta(hours=2)
+# How far ahead the passes_next_24h sensor looks.
+UPCOMING_WINDOW: Final = timedelta(hours=24)
 
 ATTRIBUTION: Final = (
     "Predictions by See A Satellite Tonight (james.darpinian.com/satellites), "

@@ -54,10 +54,6 @@ def mock_see_a_satellite(
             return_value=satellites,
         ) as fetch_site_catalog,
         patch(
-            "custom_components.see_a_satellite.config_flow.fetch_site_catalog",
-            new=fetch_site_catalog,
-        ),
-        patch(
             "custom_components.see_a_satellite.coordinator.fetch_cloud_cover",
             return_value=cloud_cover,
         ) as fetch_cloud_cover,

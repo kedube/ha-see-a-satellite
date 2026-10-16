@@ -3,7 +3,7 @@
 import logging
 from typing import Any, override
 
-from see_a_satellite import CatalogError, fetch_site_catalog
+from see_a_satellite import CatalogError
 import voluptuous as vol
 
 from homeassistant.config_entries import (
@@ -20,7 +20,6 @@ from homeassistant.const import (
     UnitOfLength,
 )
 from homeassistant.core import callback
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.selector import (
     BooleanSelector,
     LocationSelector,
@@ -31,13 +30,12 @@ from homeassistant.helpers.selector import (
 )
 
 from .const import (
-    CATALOG,
     CONF_CLOUD_COVER,
     CONF_MAX_MAGNITUDE,
     DEFAULT_MAX_MAGNITUDE,
     DOMAIN,
 )
-from .coordinator import SeeASatelliteConfigEntry
+from .coordinator import SeeASatelliteConfigEntry, async_get_catalog
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -87,7 +85,8 @@ class SeeASatelliteConfigFlow(ConfigFlow, domain=DOMAIN):
             await self.async_set_unique_id(f"{latitude:.4f}_{longitude:.4f}")
             self._abort_if_unique_id_configured()
             try:
-                await fetch_site_catalog(async_get_clientsession(self.hass), CATALOG)
+                # Shared with the locations, so the catalog isn't downloaded twice.
+                await async_get_catalog(self.hass).async_get()
             except CatalogError:
                 errors["base"] = "cannot_connect"
             except Exception:

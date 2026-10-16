@@ -4,7 +4,10 @@ from datetime import UTC, datetime, timedelta
 
 from freezegun.api import FrozenDateTimeFactory
 import pytest
-from pytest_homeassistant_custom_component.common import async_fire_time_changed
+from pytest_homeassistant_custom_component.common import (
+    MockConfigEntry,
+    async_fire_time_changed,
+)
 
 from homeassistant.components.calendar import (
     DOMAIN as CALENDAR_DOMAIN,
@@ -63,6 +66,34 @@ async def test_pass_in_progress(
     await hass.async_block_till_done()
     assert hass.states.get(visible).state == STATE_OFF
     assert hass.states.get("sensor.home_next_pass").state > "2026-10-10T19:09:44+00:00"
+
+
+async def test_passes_next_24h_follow_the_window(
+    hass: HomeAssistant,
+    freezer: FrozenDateTimeFactory,
+    init_integration: MockConfigEntry,
+) -> None:
+    """A pass is counted as soon as it is less than 24 hours away."""
+    now = datetime(2026, 10, 11, 3, 50, tzinfo=UTC)
+    freezer.move_to(now)
+    async_fire_time_changed(hass)
+    await hass.async_block_till_done(wait_background_tasks=True)
+    sensor = "sensor.home_passes_next_24_hours"
+    before = int(hass.states.get(sensor).state)
+
+    passes = init_integration.runtime_data.data.passes
+    later = next(p for p in passes if p.start > now + timedelta(hours=24))
+    # No pass starts or ends and no refresh is due before it comes into view.
+    assert all(
+        p.start > later.start - timedelta(hours=24) for p in passes if p.end > now
+    )
+    assert later.start - timedelta(hours=24) < now + timedelta(hours=2)
+    freezer.move_to(later.start - timedelta(hours=24) + timedelta(seconds=2))
+    async_fire_time_changed(hass)
+    await hass.async_block_till_done()
+    state = hass.states.get(sensor)
+    assert int(state.state) == before + 1
+    assert state.attributes["passes"][-1]["start"] == later.start.isoformat()
 
 
 async def test_calendar(hass: HomeAssistant) -> None:

@@ -67,6 +67,27 @@ async def test_catalog_restored_from_storage(
     assert hass.states.get("sensor.home_next_pass").state == "2026-10-10T19:08:36+00:00"
 
 
+async def test_unreadable_stored_catalog_is_downloaded(
+    hass: HomeAssistant,
+    hass_storage: dict[str, Any],
+    freezer: FrozenDateTimeFactory,
+    mock_config_entry: MockConfigEntry,
+    mock_see_a_satellite: dict[str, AsyncMock],
+) -> None:
+    """A stored catalog that can't be read doesn't block setup."""
+    freezer.move_to(NOW)
+    hass_storage[f"{DOMAIN}.brightest_catalog"] = {
+        "version": 1,
+        "key": f"{DOMAIN}.brightest_catalog",
+        "data": {"updated": NOW.isoformat(), "catalog": [{"MAG": 1}]},
+    }
+    mock_config_entry.add_to_hass(hass)
+    await hass.config_entries.async_setup(mock_config_entry.entry_id)
+    await hass.async_block_till_done()
+    assert mock_config_entry.state is ConfigEntryState.LOADED
+    mock_see_a_satellite["fetch_site_catalog"].assert_awaited_once()
+
+
 async def test_fresh_stored_catalog_is_not_downloaded(
     hass: HomeAssistant,
     hass_storage: dict[str, Any],

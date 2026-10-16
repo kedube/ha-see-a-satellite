@@ -39,6 +39,7 @@ from .const import (
     DOMAIN,
     LOGGER,
     PREDICTION_REFRESH,
+    UPCOMING_WINDOW,
 )
 
 type SeeASatelliteConfigEntry = ConfigEntry[SeeASatelliteCoordinator]
@@ -85,8 +86,15 @@ class SatelliteCatalog:
     async def _async_load(self) -> None:
         if (stored := await self._store.async_load()) is None:
             return
-        self.satellites = parse_site_catalog(stored["catalog"])
-        self.updated = dt_util.parse_datetime(stored["updated"])
+        try:
+            satellites = parse_site_catalog(stored["catalog"])
+            updated = dt_util.parse_datetime(stored["updated"])
+        except (AttributeError, KeyError, TypeError, ValueError) as err:
+            # Download a fresh catalog rather than failing every update.
+            LOGGER.warning("Ignoring the stored satellite catalog: %s", err)
+            return
+        self.satellites = satellites
+        self.updated = updated
 
     async def _async_refresh(self) -> None:
         self.satellites = await fetch_site_catalog(
@@ -224,12 +232,17 @@ class SeeASatelliteCoordinator(DataUpdateCoordinator[SatelliteData]):
 
     @callback
     def _schedule_boundary(self, data: SatelliteData) -> None:
-        """Wake listeners when a pass starts or ends so states stay current."""
+        """Wake listeners when a pass starts, ends or comes within a day."""
         if self._unsub_boundary:
             self._unsub_boundary()
             self._unsub_boundary = None
         now = dt_util.utcnow()
-        upcoming = [t for p in data.passes for t in (p.start, p.end) if t > now]
+        upcoming = [
+            t
+            for p in data.passes
+            for t in (p.start - UPCOMING_WINDOW, p.start, p.end)
+            if t > now
+        ]
         if not upcoming:
             return
         self._unsub_boundary = async_track_point_in_utc_time(
